@@ -412,13 +412,20 @@
             "type": "string"
           },
           "phoneNumberId": {
-            "title": "Phonenumberid",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Phonenumberid"
           }
         },
         "required": [
           "id",
-          "phoneNumberId",
           "phoneNumber"
         ],
         "title": "EventChannelPayload",

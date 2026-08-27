@@ -95,6 +95,25 @@ def _message_received_payload_with_deal_extra(
     return MessageReceivedEventRequest.model_validate(payload)
 
 
+@pytest.mark.parametrize(
+    ("phone_number_id", "expected"),
+    [
+        (None, None),
+        (111111111111111, "111111111111111"),
+    ],
+)
+def test_message_received_payload_accepts_nullable_or_numeric_phone_number_id(
+    phone_number_id: int | None,
+    expected: str | None,
+) -> None:
+    payload_data = _message_received_payload().model_dump(mode="json")
+    payload_data["data"]["channel"]["phoneNumberId"] = phone_number_id
+
+    payload = MessageReceivedEventRequest.model_validate(payload_data)
+
+    assert payload.data.channel.phoneNumberId == expected
+
+
 def test_message_received_payload_accepts_flattened_message_data() -> None:
     payload_data = _message_received_payload().model_dump(mode="json")
     message = payload_data["data"].pop("message")

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 PipefacilDeliveryStatus = Literal["sent", "failed"]
 PipefacilDeliveryErrorCode = Literal[
@@ -122,9 +122,16 @@ class EventChannelPayload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str
-    phoneNumberId: str
+    phoneNumberId: str | None = None
     phoneNumber: str
     displayName: str | None = None
+
+    @field_validator("phoneNumberId", mode="before")
+    @classmethod
+    def normalize_phone_number_id(cls, value: Any) -> Any:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return str(value)
+        return value
 
 
 class EventContactPayload(BaseModel):
