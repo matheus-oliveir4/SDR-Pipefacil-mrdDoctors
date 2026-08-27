@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "app_name": "SDR Agent Template",
+  "app_slug": "sdr-agent-template",
+  "pipefacil": {
+    "timeout_seconds": 20.0,
+    "media_max_bytes": 25000000,
+    "webhook_idempotency_ttl_seconds": 86400,
+    "ai_attendance_field_slug": "atendimento_por_ia",
+    "max_tokens_per_lead": 0,
+    "conversation_history_path": "/api/v1/messages",
+    "webhook_signature_header": "X-Pipefacil-Signature-256"
+  },
+  "audio": {
+    "enabled": false,
+    "auto_enabled": false,
+    "auto_min_chars": 650,
+    "max_chars": 1200,
+    "ttl_seconds": 86400,
+    "storage_dir": ".runtime/generated-audio",
+    "auto_text": "Te mandei um audio para explicar melhor.",
+    "convert_to_ogg_opus": false
+  },
+  "elevenlabs": {
+    "base_url": "https://api.elevenlabs.io",
+    "voice_id": "RGymW84CSmfVugnA5tvA",
+    "model_id": "eleven_v3",
+    "output_format": "opus_48000_96",
+    "tts_cost_per_1k_chars_usd": null,
+    "timeout_seconds": 30.0,
+    "max_attempts": 2,
+    "retry_backoff_seconds": 0.5,
+    "voice_stability": 0.45,
+    "voice_similarity_boost": 0.85,
+    "voice_style": 0.35,
+    "voice_use_speaker_boost": true,
+    "voice_speed": 1.0
+  },
+  "openai": {
+    "model": "gpt-5.3-chat-latest",
+    "transcription_model": "gpt-4o-mini-transcribe",
+    "specialists_enabled": false,
+    "specialist_model": null,
+    "specialist_max_turns": 8
+  },
+  "observability": {
+    "langfuse_pipefacil_user_id_mode": "contact_id"
+  }
+}

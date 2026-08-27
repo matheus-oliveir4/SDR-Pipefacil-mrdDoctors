@@ -1,0 +1,12 @@
+services:
+  api:
+    build:
+      context: .
+    container_name: sdr-pipefacil-api
+    restart: unless-stopped
+    env_file:
+      - path: ${COMPOSE_ENV_FILE:-.env.prod}
+      - path: ${COMPOSE_ENV_LOCAL_FILE:-.env.prod.local}
+        required: false
+    ports:
+      - "${PORT:-8000}:8000"

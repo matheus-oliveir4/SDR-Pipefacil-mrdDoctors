@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Validate generated agent configuration
+        run: python scripts/generate_agent_config.py --check
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Test with coverage
+        run: pytest --cov=app --cov-report=term-missing
+
+  sync-langfuse-prompts:
+    name: Sync prompts to Langfuse staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    concurrency:
+      group: langfuse-prompt-sync-${{ github.ref }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Confirm current main revision
+        id: source
+        shell: bash
+        run: |
+          git fetch --no-tags --depth=1 origin +main:refs/remotes/origin/main
+          checked_out_sha="$(git rev-parse HEAD)"
+          current_main_sha="$(git rev-parse refs/remotes/origin/main)"
+          echo "commit_sha=$checked_out_sha" >> "$GITHUB_OUTPUT"
+          if [[ "$checked_out_sha" != "$current_main_sha" ]]; then
+            echo "should_sync=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale workflow revision $checked_out_sha; main is $current_main_sha."
+            exit 0
+          fi
+          echo "should_sync=true" >> "$GITHUB_OUTPUT"
+
+      - name: Synchronize changed prompts
+        if: steps.source.outputs.should_sync == 'true'
+        env:
+          APP_ENV: staging
+          LANGFUSE_ENABLED: "true"
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
+          PROMPT_SYNC_COMMIT_SHA: ${{ steps.source.outputs.commit_sha }}
+        run: python scripts/bootstrap_langfuse_prompts.py

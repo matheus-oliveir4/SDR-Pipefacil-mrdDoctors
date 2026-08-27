@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["...", "ffmpeg"]
+
+[phases.install]
+onlyIncludeFiles = ["pyproject.toml", "README.md", "src"]
+
+[start]
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
