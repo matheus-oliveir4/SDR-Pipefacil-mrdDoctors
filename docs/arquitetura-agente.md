@@ -16,18 +16,23 @@ webhook, transporte HTTP externo ou contratos especificos de integracao.
 Fluxo atual:
 
 ```text
-START -> classify-intent -> respond -> END
+START -> classify-intent -> qualify-lead -> respond -> END
 ```
 
 Quando o classificador marca `requires_specialist=true`, o fluxo passa por um especialista
 interno antes do responder:
 
 ```text
-START -> classify-intent -> delegate-specialist -> respond -> END
+START -> classify-intent -> qualify-lead -> delegate-specialist -> respond -> END
 ```
 
 O especialista OpenAI Agents SDK nunca envia mensagem ao Pipefacil. Ele retorna trabalho
 estruturado para o `respond`, que continua montando a resposta final.
+
+`qualify-lead` avalia a conversa inteira e persiste uma classificacao estruturada. O lead
+so recebe `qualified` quando segmento, necessidade real, intencao de compra/reposicao,
+prazo/orcamento/planejamento plausivel e acesso ao decisor estao confirmados. Dados ausentes
+mantem o lead em `qualifying`; contradicao explicita resulta em `not_qualified`.
 
 ## Estrutura
 
@@ -97,6 +102,8 @@ Boas regras:
 - adicione campos de estado antes de espalhar dicionarios soltos pelos nodes.
 - `resume_context` e uma orientacao operacional interna para retomadas; nunca o trate como
   mensagem do lead nem o revele na resposta.
+- `lead_qualification` guarda perfil, evidencias por criterio, lacunas, contradicoes e a
+  proxima pergunta sugerida. O responder usa esse contexto sem revelar labels internos.
 - mensagens multimodais devem chegar ao agente como `HumanMessage`/content blocks LangChain
   ja normalizados pela camada de aplicacao/integracao; o grafo nao conhece o contrato
   Pipefacil nem URLs assinadas de midia/arquivo.

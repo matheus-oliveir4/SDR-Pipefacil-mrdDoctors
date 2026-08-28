@@ -9,10 +9,12 @@ from langchain_core.prompts.chat import MessagesPlaceholder
 
 from app.agent.prompts import (
     CLASSIFIER_PROMPT_NAME,
+    QUALIFICATION_PROMPT_NAME,
     RESPONDER_PROMPT_NAME,
     WHATSAPP_STYLE_PROMPT_NAME,
     get_classifier_prompt_template,
     get_prompt_definitions,
+    get_qualification_prompt_template,
     get_responder_prompt_template,
     get_whatsapp_style_prompt_text,
 )
@@ -135,6 +137,29 @@ def test_responder_prompt_template_preserves_message_placeholder(
     assert "conversation_history" in template.input_variables
     assert "response_style" in template.input_variables
     assert "available_media" in template.input_variables
+    assert "lead_qualification_context" in template.input_variables
+
+
+def test_qualification_prompt_defines_all_business_criteria(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LANGFUSE_ENABLED", "false")
+
+    prompt, template = get_qualification_prompt_template()
+    definitions = {definition.name: definition for definition in get_prompt_definitions()}
+    qualification_prompt = definitions[QUALIFICATION_PROMPT_NAME].prompt
+
+    assert prompt.name == QUALIFICATION_PROMPT_NAME
+    assert any(isinstance(message, MessagesPlaceholder) for message in template.messages)
+    assert "conversation_history" in template.input_variables
+    assert isinstance(qualification_prompt, list)
+    system_prompt = qualification_prompt[0]["content"]
+    assert "segment_fit" in system_prompt
+    assert "real_need" in system_prompt
+    assert "purchase_intent" in system_prompt
+    assert "plausible_plan" in system_prompt
+    assert "decision_access" in system_prompt
+    assert "Never treat missing information as contradicted" in system_prompt
 
 
 def test_responder_prompt_defines_hybrid_text_and_audio_policy() -> None:
@@ -150,12 +175,49 @@ def test_responder_prompt_defines_hybrid_text_and_audio_policy() -> None:
     assert "Do not repeat the same content in both formats" in system_prompt
 
 
+def test_responder_prompt_contains_mr_doctors_business_context() -> None:
+    definitions = {definition.name: definition for definition in get_prompt_definitions()}
+    responder_prompt = definitions[RESPONDER_PROMPT_NAME].prompt
+
+    assert isinstance(responder_prompt, list)
+    system_prompt = responder_prompt[0]["content"]
+    assert "Company: MR Doctors" in system_prompt
+    assert "wholesale for retailers and resellers" in system_prompt
+    assert "doctors, nurses, aestheticians" in system_prompt
+    assert "Av. Juarez Barroso, 126" in system_prompt
+    assert "https://www.instagram.com/mrdoctorsbrasil/" in system_prompt
+    assert "41.326.017/0001-10" in system_prompt
+
+
+def test_responder_prompt_guards_unknown_commercial_terms() -> None:
+    definitions = {definition.name: definition for definition in get_prompt_definitions()}
+    responder_prompt = definitions[RESPONDER_PROMPT_NAME].prompt
+
+    assert isinstance(responder_prompt, list)
+    system_prompt = responder_prompt[0]["content"]
+    assert "Do not invent prices, minimum order quantities" in system_prompt
+    assert "commercial team will confirm it" in system_prompt
+    assert "retailer/reseller or a healthcare professional" in system_prompt
+
+
+def test_responder_prompt_introduces_mr_doctors_assistant_only_once() -> None:
+    definitions = {definition.name: definition for definition in get_prompt_definitions()}
+    responder_prompt = definitions[RESPONDER_PROMPT_NAME].prompt
+
+    assert isinstance(responder_prompt, list)
+    system_prompt = responder_prompt[0]["content"]
+    assert "On the first assistant reply in a conversation" in system_prompt
+    assert "assistente virtual da MR Doctors" in system_prompt
+    assert "Do not repeat this introduction in later replies" in system_prompt
+
+
 def test_whatsapp_style_prompt_is_defined_as_text_prompt() -> None:
     definitions = {definition.name: definition for definition in get_prompt_definitions()}
 
     assert definitions[WHATSAPP_STYLE_PROMPT_NAME].type == "text"
     assert "WhatsApp" in definitions[WHATSAPP_STYLE_PROMPT_NAME].prompt
     assert definitions[CLASSIFIER_PROMPT_NAME].type == "chat"
+    assert definitions[QUALIFICATION_PROMPT_NAME].type == "chat"
     assert definitions[RESPONDER_PROMPT_NAME].type == "chat"
 
 

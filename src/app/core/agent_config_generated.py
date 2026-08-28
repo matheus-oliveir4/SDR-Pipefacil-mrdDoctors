@@ -1,8 +1,8 @@
 """Generated from .agent.json. Do not edit manually."""
 
 AGENT_DEFAULTS: dict[str, object] = {
-    "app_name": "SDR Agent Template",
-    "app_slug": "sdr-agent-template",
+    "app_name": "SDR MR Doctors",
+    "app_slug": "sdr-mr-doctors",
     "pipefacil_timeout_seconds": 20.0,
     "pipefacil_media_max_bytes": 25000000,
     "pipefacil_webhook_idempotency_ttl_seconds": 86400,

@@ -50,17 +50,22 @@ quando habilitados.
 O fluxo principal continua:
 
 ```text
-START -> classify-intent -> respond -> END
+START -> classify-intent -> qualify-lead -> respond -> END
 ```
 
 O grafo tambem tem um caminho condicional para trabalho interno mais complexo:
 
 ```text
-START -> classify-intent -> delegate-specialist -> respond -> END
+START -> classify-intent -> qualify-lead -> delegate-specialist -> respond -> END
 ```
 
 O classificador decide se a rodada precisa de especialista, o node executa o OpenAI Agents
 SDK atras de feature flag e o responder mantem a mensagem final.
+
+O node `qualify-lead` usa structured output para avaliar cinco criterios comerciais sobre o
+historico completo. O status final e derivado deterministicamente no codigo: todos os
+criterios confirmados geram `qualified`, informacao faltante gera `qualifying` e qualquer
+contradicao explicita gera `not_qualified`.
 
 ### `src/app/agent/routing.py`
 

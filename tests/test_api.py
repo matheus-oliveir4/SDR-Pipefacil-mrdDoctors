@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
 
 import app.agent.nodes.intent as intent_nodes
+import app.agent.nodes.qualification as qualification_nodes
 import app.agent.nodes.response as response_nodes
 import app.api.routes.chat as chat_routes
 import app.api.routes.ops as ops_routes
@@ -20,7 +21,11 @@ import app.api.routes.webhooks as webhook_routes
 import app.application.conversations as conversation_application
 import app.application.pipefacil as pipefacil_application
 import app.main as main_app
-from app.agent.chains.schemas import IntentClassification
+from app.agent.chains.schemas import (
+    IntentClassification,
+    LeadQualificationAssessment,
+    QualificationCriterionAssessment,
+)
 from app.api.schemas import MessageReceivedEventRequest
 from app.application.dto import (
     ChatTurnResult,
@@ -61,6 +66,26 @@ def clear_settings_and_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LANGGRAPH_CHECKPOINT_SCHEMA", "")
     reset_langfuse_clients()
     get_settings.cache_clear()
+
+    class FakeQualificationChain:
+        def invoke(self, payload, config=None):
+            missing = QualificationCriterionAssessment(status="missing")
+            return LeadQualificationAssessment(
+                profile="unknown",
+                segment_fit=missing,
+                real_need=missing,
+                purchase_intent=missing,
+                plausible_plan=missing,
+                decision_access=missing,
+                next_question="Você atua com fardamentos, saúde ou estética?",
+                reason="Ainda faltam informações para qualificar o lead.",
+            )
+
+    monkeypatch.setattr(
+        qualification_nodes,
+        "_build_qualification_chain",
+        lambda: FakeQualificationChain(),
+    )
     yield
     reset_langfuse_clients()
     get_settings.cache_clear()

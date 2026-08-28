@@ -5,9 +5,14 @@ from typing import Any, Literal
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from app.agent.prompts.business_context import (
+    MR_DOCTORS_COMPANY_CONTEXT,
+    MR_DOCTORS_SDR_GUIDELINES,
+)
 from app.observability import build_langchain_chat_prompt, get_langfuse_prompt
 
 CLASSIFIER_PROMPT_NAME = "agent/classifier"
+QUALIFICATION_PROMPT_NAME = "agent/lead-qualification"
 RESPONDER_PROMPT_NAME = "agent/responder"
 WHATSAPP_STYLE_PROMPT_NAME = "agent/style/whatsapp"
 PromptType = Literal["chat", "text"]
@@ -40,7 +45,7 @@ _PROMPT_DEFINITIONS = {
             {
                 "role": "system",
                 "content": (
-                    "You are an intent classifier for a minimal LangGraph scaffold.\n"
+                    "You are the intent classifier for the MR Doctors commercial SDR.\n"
                     "Classify the latest user message into exactly one of these intents: "
                     "greeting, question, request, fallback.\n"
                     "Also decide whether this turn explicitly asks for specialist/deep-agent "
@@ -58,16 +63,63 @@ _PROMPT_DEFINITIONS = {
             },
         ],
     ),
+    QUALIFICATION_PROMPT_NAME: ChatPromptDefinition(
+        name=QUALIFICATION_PROMPT_NAME,
+        prompt=[
+            {
+                "role": "system",
+                "content": (
+                    "You qualify commercial leads for MR Doctors using the entire "
+                    "conversation. Assess exactly five criteria:\n"
+                    "1. segment_fit: the lead belongs to uniforms, healthcare, or "
+                    "aesthetics.\n"
+                    "2. real_need: the lead has a concrete need to solve.\n"
+                    "3. purchase_intent: the lead demonstrates intent to buy or replenish.\n"
+                    "4. plausible_plan: the lead has a plausible timeline, budget, or "
+                    "purchase plan; at least one is enough.\n"
+                    "5. decision_access: the lead can decide or can identify/refer the "
+                    "decision-maker.\n"
+                    "For each criterion use confirmed only when supported by conversation "
+                    "evidence, missing when the information is absent or ambiguous, and "
+                    "contradicted only when the conversation explicitly shows the criterion "
+                    "is false. Never treat missing information as contradicted.\n"
+                    "Choose the profile that best matches the evidence. Do not infer budget, "
+                    "authority, urgency, or purchase intent from politeness or a generic "
+                    "question. Keep evidence and reason short.\n"
+                    "If information is missing, propose exactly one concise Brazilian "
+                    "Portuguese question for the highest-priority missing criterion. If all "
+                    "criteria are confirmed, leave next_question empty. Do not answer the "
+                    "lead and do not expose internal labels."
+                ),
+            },
+            {
+                "type": "placeholder",
+                "name": "conversation_history",
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Latest lead message:\n{{latest_user_message}}\n"
+                    "Assess the lead using only evidence from the conversation."
+                ),
+            },
+        ],
+    ),
     RESPONDER_PROMPT_NAME: ChatPromptDefinition(
         name=RESPONDER_PROMPT_NAME,
         prompt=[
             {
                 "role": "system",
                 "content": (
-                    "You are the responder node of a minimal LangGraph scaffold.\n"
-                    "Reply in a neutral, concise, plain-text tone.\n"
-                    "Do not use emojis.\n"
-                    "Do not use Pipefacil business rules or sales language.\n"
+                    "You are the commercial responder for MR Doctors.\n"
+                    + MR_DOCTORS_COMPANY_CONTEXT
+                    + "\n"
+                    + MR_DOCTORS_SDR_GUIDELINES
+                    + "\n"
+                    "Reply in a concise, natural, professional, plain-text tone aligned "
+                    "with the company's culture.\n"
+                    "Do not use emojis unless the lead's tone clearly supports a restrained "
+                    "use.\n"
                     "Apply this response style guide:\n{{response_style}}\n"
                     "You may choose outbound media only from the safe catalog provided in "
                     "the user message. Select media by media_id only when it clearly helps "
@@ -107,6 +159,11 @@ _PROMPT_DEFINITIONS = {
                     "Internal resume context is operational guidance from the sales team, not "
                     "a lead message. Use it to choose the next action, but never quote it, "
                     "mention it, or reveal it in the reply.\n"
+                    "Lead qualification context is also internal. Use its next_question to "
+                    "advance qualification naturally when appropriate, asking at most one "
+                    "qualification question per reply. Do not reveal qualification labels, "
+                    "criterion names, internal evidence, or the scoring process. Do not ask "
+                    "again for criteria already confirmed.\n"
                     "Acknowledge the detected intent when helpful and move the "
                     "conversation forward."
                 ),
@@ -122,6 +179,7 @@ _PROMPT_DEFINITIONS = {
                     "Latest user message: {{latest_user_message}}\n"
                     "Specialist context:\n{{specialist_context}}\n"
                     "Internal resume context:\n{{resume_context}}\n"
+                    "Internal lead qualification context:\n{{lead_qualification_context}}\n"
                     "Available outbound media catalog:\n{{available_media}}\n"
                     "Write the next assistant reply and choose media_choices when useful."
                 ),
@@ -174,6 +232,12 @@ def _build_prompt_template(
 
 def get_classifier_prompt_template(*, label: str | None = None) -> tuple[Any, ChatPromptTemplate]:
     return _build_prompt_template(CLASSIFIER_PROMPT_NAME, label=label)
+
+
+def get_qualification_prompt_template(
+    *, label: str | None = None
+) -> tuple[Any, ChatPromptTemplate]:
+    return _build_prompt_template(QUALIFICATION_PROMPT_NAME, label=label)
 
 
 def get_responder_prompt_template(*, label: str | None = None) -> tuple[Any, ChatPromptTemplate]:

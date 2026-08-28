@@ -6,9 +6,14 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 import app.agent.nodes.intent as intent_nodes
+import app.agent.nodes.qualification as qualification_nodes
 import app.agent.nodes.response as response_nodes
 from app.agent import run_agent
-from app.agent.chains.schemas import IntentClassification
+from app.agent.chains.schemas import (
+    IntentClassification,
+    LeadQualificationAssessment,
+    QualificationCriterionAssessment,
+)
 from app.core.config import get_settings
 from app.observability import reset_langfuse_clients
 from app.outbound_media import OUTBOUND_MEDIA_CATALOG_UNAVAILABLE_TEXT
@@ -22,6 +27,26 @@ def no_outbound_media(monkeypatch: pytest.MonkeyPatch) -> None:
         response_nodes,
         "_get_available_media_prompt_view",
         lambda: OUTBOUND_MEDIA_CATALOG_UNAVAILABLE_TEXT,
+    )
+
+    class FakeQualificationChain:
+        def invoke(self, payload, config=None):
+            missing = QualificationCriterionAssessment(status="missing")
+            return LeadQualificationAssessment(
+                profile="unknown",
+                segment_fit=missing,
+                real_need=missing,
+                purchase_intent=missing,
+                plausible_plan=missing,
+                decision_access=missing,
+                next_question="Você atua com fardamentos, saúde ou estética?",
+                reason="Ainda faltam informações para qualificar o lead.",
+            )
+
+    monkeypatch.setattr(
+        qualification_nodes,
+        "_build_qualification_chain",
+        lambda: FakeQualificationChain(),
     )
 
 
@@ -63,6 +88,7 @@ def test_langgraph_scaffold_graph_runs(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result["latest_user_message"] == "teste de estrutura"
     assert result["intent"] == "question"
     assert result["intent_reason"] == "Mensagem curta tratada como pergunta neutra."
+    assert result["lead_qualification"]["status"] == "qualifying"
     assert result["response_text"] == "Resposta de scaffold."
     assert isinstance(result["messages"][-1], AIMessage)
     assert result["messages"][-1].content == "Resposta de scaffold."

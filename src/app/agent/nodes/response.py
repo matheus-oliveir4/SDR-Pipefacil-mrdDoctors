@@ -302,6 +302,14 @@ def _specialist_context(state: AgentState) -> str:
     return json.dumps(result, ensure_ascii=False, separators=(",", ":"))
 
 
+def _lead_qualification_context(state: AgentState) -> str:
+    qualification = state.get("lead_qualification")
+    if not qualification:
+        return "No lead qualification available."
+
+    return json.dumps(qualification, ensure_ascii=False, separators=(",", ":"))
+
+
 def respond(
     state: AgentState,
     config: RunnableConfig = None,
@@ -334,6 +342,7 @@ def respond(
             "specialist_result": state.get("specialist_result"),
             "specialist_context": _specialist_context(state),
             "resume_context": resume_context or "No additional resume context.",
+            "lead_qualification_context": _lead_qualification_context(state),
             "response_style": _get_response_style(),
             "available_media": available_media,
         },

@@ -1,11 +1,12 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.agent.nodes import classify_intent, delegate_specialist, respond
+from app.agent.nodes import classify_intent, delegate_specialist, qualify_lead, respond
 from app.agent.routing import (
     CLASSIFY_INTENT_NODE,
     DELEGATE_SPECIALIST_NODE,
+    QUALIFY_LEAD_NODE,
     RESPOND_NODE,
-    route_after_intent,
+    route_after_qualification,
 )
 from app.agent.state import AgentState
 
@@ -13,12 +14,14 @@ from app.agent.state import AgentState
 def build_graph(*, checkpointer=None):
     builder = StateGraph(AgentState)
     builder.add_node(CLASSIFY_INTENT_NODE, classify_intent)
+    builder.add_node(QUALIFY_LEAD_NODE, qualify_lead)
     builder.add_node(DELEGATE_SPECIALIST_NODE, delegate_specialist)
     builder.add_node(RESPOND_NODE, respond)
     builder.add_edge(START, CLASSIFY_INTENT_NODE)
+    builder.add_edge(CLASSIFY_INTENT_NODE, QUALIFY_LEAD_NODE)
     builder.add_conditional_edges(
-        CLASSIFY_INTENT_NODE,
-        route_after_intent,
+        QUALIFY_LEAD_NODE,
+        route_after_qualification,
         {
             DELEGATE_SPECIALIST_NODE: DELEGATE_SPECIALIST_NODE,
             RESPOND_NODE: RESPOND_NODE,

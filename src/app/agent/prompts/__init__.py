@@ -1,5 +1,6 @@
 from app.agent.prompts.definitions import (
     CLASSIFIER_PROMPT_NAME,
+    QUALIFICATION_PROMPT_NAME,
     RESPONDER_PROMPT_NAME,
     WHATSAPP_STYLE_PROMPT_NAME,
     ChatPromptDefinition,
@@ -8,12 +9,14 @@ from app.agent.prompts.definitions import (
     get_classifier_prompt_template,
     get_prompt_definition,
     get_prompt_definitions,
+    get_qualification_prompt_template,
     get_responder_prompt_template,
     get_whatsapp_style_prompt_text,
 )
 
 __all__ = [
     "CLASSIFIER_PROMPT_NAME",
+    "QUALIFICATION_PROMPT_NAME",
     "RESPONDER_PROMPT_NAME",
     "WHATSAPP_STYLE_PROMPT_NAME",
     "ChatPromptDefinition",
@@ -22,6 +25,7 @@ __all__ = [
     "get_classifier_prompt_template",
     "get_prompt_definition",
     "get_prompt_definitions",
+    "get_qualification_prompt_template",
     "get_responder_prompt_template",
     "get_whatsapp_style_prompt_text",
 ]

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.agent.state import IntentType
+from app.agent.state import (
+    IntentType,
+    LeadProfileType,
+    QualificationCriterionStatus,
+)
 
 
 class IntentClassification(BaseModel):
@@ -11,6 +15,30 @@ class IntentClassification(BaseModel):
     requires_specialist: bool = False
     specialist_name: str | None = None
     specialist_reason: str | None = None
+
+
+class QualificationCriterionAssessment(BaseModel):
+    status: QualificationCriterionStatus
+    evidence: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Short evidence grounded in the conversation; null when missing.",
+    )
+
+
+class LeadQualificationAssessment(BaseModel):
+    profile: LeadProfileType
+    segment_fit: QualificationCriterionAssessment
+    real_need: QualificationCriterionAssessment
+    purchase_intent: QualificationCriterionAssessment
+    plausible_plan: QualificationCriterionAssessment
+    decision_access: QualificationCriterionAssessment
+    next_question: str | None = Field(
+        default=None,
+        max_length=300,
+        description="One concise question for the highest-priority missing criterion.",
+    )
+    reason: str = Field(min_length=1, max_length=500)
 
 
 class OutboundMediaChoice(BaseModel):

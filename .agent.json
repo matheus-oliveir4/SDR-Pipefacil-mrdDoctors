@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "app_name": "SDR Agent Template",
-  "app_slug": "sdr-agent-template",
+  "app_name": "SDR MR Doctors",
+  "app_slug": "sdr-mr-doctors",
   "pipefacil": {
     "timeout_seconds": 20.0,
     "media_max_bytes": 25000000,

@@ -7,12 +7,15 @@ from openai import BadRequestError
 
 import app.agent.chains.llm as llm_chains
 import app.agent.nodes.intent as intent_nodes
+import app.agent.nodes.qualification as qualification_nodes
 import app.agent.nodes.response as response_nodes
 from app.agent.chains.schemas import (
     AgentResponsePlan,
     GeneratedAudioChoice,
     IntentClassification,
+    LeadQualificationAssessment,
     OutboundMediaChoice,
+    QualificationCriterionAssessment,
 )
 from app.agent.messages import has_sensitive_multimodal_content, message_to_text, serialize_messages
 from app.agent.specialists import SpecialistResult
@@ -128,6 +131,134 @@ def test_classify_intent_can_request_test_specialist(monkeypatch) -> None:
     assert result["requires_specialist"] is True
     assert result["specialist_name"] == "test_specialist"
     assert result["specialist_reason"] == "Pedido explicito de especialista."
+
+
+def test_qualify_lead_requires_all_five_confirmed_criteria(monkeypatch) -> None:
+    input_message = HumanMessage(
+        content=(
+            "Tenho uma loja de fardamentos, preciso repor scrubs este mes, tenho verba "
+            "reservada e eu decido a compra."
+        )
+    )
+    confirmed = QualificationCriterionAssessment(
+        status="confirmed",
+        evidence="Confirmado pelo lead.",
+    )
+
+    class FakeQualificationChain:
+        def invoke(self, payload, config=None):
+            assert payload["conversation_history"] == [
+                {"role": "user", "content": input_message.content}
+            ]
+            return LeadQualificationAssessment(
+                profile="retailer_reseller",
+                segment_fit=confirmed,
+                real_need=confirmed,
+                purchase_intent=confirmed,
+                plausible_plan=confirmed,
+                decision_access=confirmed,
+                next_question="Esta pergunta deve ser descartada.",
+                reason="Todos os criterios possuem evidencia.",
+            )
+
+    monkeypatch.setattr(
+        qualification_nodes,
+        "_build_qualification_chain",
+        lambda: FakeQualificationChain(),
+    )
+
+    result = qualification_nodes.qualify_lead(
+        {"messages": [input_message], "latest_user_message": input_message.content}
+    )
+
+    qualification = result["lead_qualification"]
+    assert qualification["status"] == "qualified"
+    assert qualification["missing_criteria"] == []
+    assert qualification["contradicted_criteria"] == []
+    assert qualification["next_question"] is None
+
+
+def test_qualify_lead_keeps_missing_evidence_as_qualifying(monkeypatch) -> None:
+    confirmed = QualificationCriterionAssessment(
+        status="confirmed",
+        evidence="A lead informou que administra uma clinica de estetica.",
+    )
+    missing = QualificationCriterionAssessment(status="missing")
+
+    class FakeQualificationChain:
+        def invoke(self, payload, config=None):
+            return LeadQualificationAssessment(
+                profile="healthcare_professional",
+                segment_fit=confirmed,
+                real_need=confirmed,
+                purchase_intent=missing,
+                plausible_plan=missing,
+                decision_access=missing,
+                reason="O segmento e a necessidade estao claros, mas faltam dados de compra.",
+            )
+
+    monkeypatch.setattr(
+        qualification_nodes,
+        "_build_qualification_chain",
+        lambda: FakeQualificationChain(),
+    )
+
+    result = qualification_nodes.qualify_lead(
+        {
+            "messages": [HumanMessage(content="Tenho uma clinica e preciso de uniformes.")],
+            "latest_user_message": "Tenho uma clinica e preciso de uniformes.",
+        }
+    )
+
+    qualification = result["lead_qualification"]
+    assert qualification["status"] == "qualifying"
+    assert qualification["missing_criteria"] == [
+        "purchase_intent",
+        "plausible_plan",
+        "decision_access",
+    ]
+    assert qualification["next_question"] == (
+        "Você está buscando comprar agora ou planejando uma reposição?"
+    )
+
+
+def test_qualify_lead_marks_explicit_contradiction_as_not_qualified(monkeypatch) -> None:
+    contradicted = QualificationCriterionAssessment(
+        status="contradicted",
+        evidence="A pessoa informou que nao atua nos segmentos atendidos.",
+    )
+    missing = QualificationCriterionAssessment(status="missing")
+
+    class FakeQualificationChain:
+        def invoke(self, payload, config=None):
+            return LeadQualificationAssessment(
+                profile="other",
+                segment_fit=contradicted,
+                real_need=missing,
+                purchase_intent=missing,
+                plausible_plan=missing,
+                decision_access=missing,
+                next_question="Pergunta ignorada para lead nao qualificado.",
+                reason="Ha contradicao explicita no criterio de segmento.",
+            )
+
+    monkeypatch.setattr(
+        qualification_nodes,
+        "_build_qualification_chain",
+        lambda: FakeQualificationChain(),
+    )
+
+    result = qualification_nodes.qualify_lead(
+        {
+            "messages": [HumanMessage(content="Nao atuo com uniformes, saude ou estetica.")],
+            "latest_user_message": "Nao atuo com uniformes, saude ou estetica.",
+        }
+    )
+
+    qualification = result["lead_qualification"]
+    assert qualification["status"] == "not_qualified"
+    assert qualification["contradicted_criteria"] == ["segment_fit"]
+    assert qualification["next_question"] is None
 
 
 def test_respond_appends_ai_message(monkeypatch) -> None:

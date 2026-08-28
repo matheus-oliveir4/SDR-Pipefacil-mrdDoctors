@@ -59,8 +59,8 @@ def test_generated_defaults_match_validated_agent_config() -> None:
 
     assert agent_defaults(config) == AGENT_DEFAULTS
     settings = Settings(_env_file=None)
-    assert settings.app_name == "SDR Agent Template"
-    assert settings.app_slug == "sdr-agent-template"
+    assert settings.app_name == "SDR MR Doctors"
+    assert settings.app_slug == "sdr-mr-doctors"
     assert settings.pipefacil_conversation_history_path == "/api/v1/messages"
     assert settings.generated_audio_storage_dir == ".runtime/generated-audio"
     assert settings.elevenlabs_voice_id == "RGymW84CSmfVugnA5tvA"
