@@ -184,6 +184,7 @@ def test_responder_prompt_contains_mr_doctors_business_context() -> None:
     assert "Company: MR Doctors" in system_prompt
     assert "wholesale for retailers and resellers" in system_prompt
     assert "doctors, nurses, aestheticians" in system_prompt
+    assert "MR Doctors ships throughout Brazil" in system_prompt
     assert "Av. Juarez Barroso, 126" in system_prompt
     assert "https://www.instagram.com/mrdoctorsbrasil/" in system_prompt
     assert "41.326.017/0001-10" in system_prompt
@@ -197,6 +198,7 @@ def test_responder_prompt_guards_unknown_commercial_terms() -> None:
     system_prompt = responder_prompt[0]["content"]
     assert "Do not invent prices, minimum order quantities" in system_prompt
     assert "commercial team will confirm it" in system_prompt
+    assert "do not invent freight costs, carriers" in system_prompt
     assert "retailer/reseller or a healthcare professional" in system_prompt
 
 
