@@ -185,6 +185,11 @@ def test_responder_prompt_contains_mr_doctors_business_context() -> None:
     assert "wholesale for retailers and resellers" in system_prompt
     assert "doctors, nurses, aestheticians" in system_prompt
     assert "MR Doctors ships throughout Brazil" in system_prompt
+    assert "premium finishing; comfort, durability, and easy care" in system_prompt
+    assert "professional photos and videos for reseller marketing" in system_prompt
+    assert "support with the first stock purchase" in system_prompt
+    assert "after-sales service" in system_prompt
+    assert "cashback program for recurring purchases" in system_prompt
     assert "Av. Juarez Barroso, 126" in system_prompt
     assert "https://www.instagram.com/mrdoctorsbrasil/" in system_prompt
     assert "41.326.017/0001-10" in system_prompt
@@ -199,6 +204,9 @@ def test_responder_prompt_guards_unknown_commercial_terms() -> None:
     assert "Do not invent prices, minimum order quantities" in system_prompt
     assert "commercial team will confirm it" in system_prompt
     assert "do not invent freight costs, carriers" in system_prompt
+    assert "do not invent technical fabric specifications" in system_prompt
+    assert "cashback percentages, eligibility, validity, and redemption rules" in system_prompt
+    assert "only from the available outbound media catalog" in system_prompt
     assert "retailer/reseller or a healthcare professional" in system_prompt
 
 
